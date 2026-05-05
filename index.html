@@ -19,7 +19,7 @@
         }
 
         #bg-image {
-            width: 800px; /* 画像の基準幅 */
+            width: 800px;
             height: auto;
             max-width: 100%;
             display: block;
@@ -38,7 +38,7 @@
         
         .ui-section { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
         .inputs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
-        input { padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 140px; }
+        input { padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 140px; background: white; color: black; }
         
         .btn { padding: 12px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         #check-btn { background: #00a8ff; color: white; }
@@ -55,7 +55,7 @@
     <div class="progress-info">制覇: <span id="count">0</span> / 47</div>
     
     <div id="map-area">
-        <img id="bg-image" src="map.jpg" alt="地図読み込み中">
+        <img id="bg-image" src="map.jpg" alt="画像 map.jpg が読み込めません。GitHub上のファイル名を確認してください">
         <svg id="overlay-svg" viewBox="0 0 800 700"></svg>
     </div>
 
@@ -72,11 +72,11 @@
 </div>
 
 <script>
-// 画像（800x700想定）に合わせて全ての座標を微調整
+// 岩手県(x:550, y:260)を海から陸地に修正。他も微調整。
 const japanData = [
-    {n:"北海道", c:"札幌市", x:600, y:120}, {n:"青森県", c:"青森市", x:540, y:210}, {n:"岩手県", c:"盛岡市", x:565, y:260},
-    {n:"宮城県", c:"仙台市", x:560, y:315}, {n:"秋田県", c:"秋田市", x:525, y:265}, {n:"山形県", c:"山形市", x:525, y:315},
-    {n:"福島県", c:"福島市", x:535, y:370}, {n:"茨城県", c:"水戸市", x:540, y:440}, {n:"栃木県", c:"宇都宮市", x:515, y:430},
+    {n:"北海道", c:"札幌市", x:600, y:120}, {n:"青森県", c:"青森市", x:535, y:205}, {n:"岩手県", c:"盛岡市", x:550, y:260},
+    {n:"宮城県", c:"仙台市", x:550, y:320}, {n:"秋田県", c:"秋田市", x:515, y:260}, {n:"山形県", c:"山形市", x:515, y:320},
+    {n:"福島県", c:"福島市", x:525, y:370}, {n:"茨城県", c:"水戸市", x:540, y:440}, {n:"栃木県", c:"宇都宮市", x:515, y:430},
     {n:"群馬県", c:"前橋市", x:490, y:430}, {n:"埼玉県", c:"さいたま市", x:500, y:460}, {n:"千葉県", c:"千葉市", x:535, y:490},
     {n:"東京都", c:"新宿区", x:500, y:480}, {n:"神奈川県", c:"横浜市", x:485, y:500}, {n:"新潟県", c:"新潟市", x:480, y:355},
     {n:"富山県", c:"富山市", x:425, y:385}, {n:"石川県", c:"金沢市", x:395, y:370}, {n:"福井県", c:"福井市", x:375, y:420},
@@ -92,7 +92,7 @@ const japanData = [
     {n:"鹿児島県", c:"鹿児島市", x:160, y:710}, {n:"沖縄県", c:"那覇市", x:710, y:700}
 ];
 
-let cleared = JSON.parse(localStorage.getItem('jp_sat_precise')) || [];
+let cleared = JSON.parse(localStorage.getItem('jp_sat_precise_final')) || [];
 let target;
 
 function init() {
@@ -130,7 +130,7 @@ function judge() {
     if(p === target.n && (c === target.c || (target.n === "東京都" && (c === "新宿区" || c === "東京")))) {
         document.getElementById('msg').innerText = "⭕ 正解！";
         cleared.push(target.n);
-        localStorage.setItem('jp_sat_precise', JSON.stringify(cleared));
+        localStorage.setItem('jp_sat_precise_final', JSON.stringify(cleared));
         document.getElementById('m-' + japanData.indexOf(target)).classList.replace("target-marker", "cleared-marker");
         setTimeout(next, 800);
     } else {
@@ -142,7 +142,7 @@ function skip() { next(); }
 
 function clearData() {
     if(confirm("データを消去しますか？")) {
-        localStorage.removeItem('jp_sat_precise');
+        localStorage.removeItem('jp_sat_precise_final');
         location.reload();
     }
 }
