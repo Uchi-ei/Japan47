@@ -5,159 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日本列島 リアル地図クイズ</title>
     <style>
-        body { font-family: 'Hiragino Kaku Gothic ProN', sans-serif; background: #1a1a1a; margin: 0; padding: 10px; color: white; text-align: center; overflow-x: hidden; }
-        .container { background: #2d2d2d; max-width: 900px; margin: auto; padding: 15px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
-        /* 地図エリアのコンテナ：画像のサイズに自動で合わせる */
-        #map-wrapper {
-            position: relative;
-            display: inline-block;
-            margin: 0 auto 20px;
-            border: 2px solid #444;
-            line-height: 0;
-            max-width: 100%;
-        }
-
-        #bg-image {
-            display: block;
-            max-width: 100%;
-            height: auto;
-        }
-        
-        #overlay-svg { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .target-marker { fill: #ff4757; stroke: white; stroke-width: 1.5; filter: drop-shadow(0 0 5px red); transition: 0.3s; r: 7; }
-        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; opacity: 0.8; r: 5; }
-        
-        .ui-section { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 10px; }
-        .inputs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
-        input { padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 140px; background: #fff; color: #000; }
-        
-        .btn { padding: 12px 25px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 10px; }
+        .container { max-width: 800px; margin: auto; background: #2d2d2d; padding: 20px; border-radius: 15px; }
+        #map-container { position: relative; display: inline-block; line-height: 0; border: 2px solid #444; }
+        #bg-image { max-width: 100%; height: auto; display: block; }
+        #overlay-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .target-marker { fill: #ff4757; stroke: white; stroke-width: 2; r: 8; filter: drop-shadow(0 0 5px red); }
+        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; r: 5; opacity: 0.8; }
+        .ui { margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
+        input { padding: 10px; font-size: 16px; width: 130px; margin: 5px; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; border: none; margin: 5px; }
         #check-btn { background: #00a8ff; color: white; }
         #skip-btn { background: #fbc531; color: #2f3640; }
-        .btn:active { transform: scale(0.95); }
-        
-        #msg { font-size: 1.2rem; font-weight: bold; min-height: 1.6em; margin-bottom: 10px; color: #00d2d3; }
-        .stats { font-size: 0.9rem; margin-bottom: 10px; color: #aaa; }
+        #msg { font-size: 1.2rem; font-weight: bold; min-height: 1.5em; margin: 10px 0; color: #00d2d3; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>日本列島 リアル地図クイズ</h1>
-    <div class="stats">制覇状況: <span id="count">0</span> / 47</div>
-    
-    <div id="map-wrapper">
-        <img id="bg-image" src="map.jpg" alt="map.jpg を読み込み中...">
-        <svg id="overlay-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+    <h2>日本列島 リアル地図クイズ</h2>
+    <div id="map-container">
+        <img id="bg-image" src="map.jpg" alt="map.jpgを読み込めません">
+        <svg id="overlay-svg" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
-    <div class="ui-section">
-        <div id="msg">赤い点（都道府県）を当ててください</div>
-        <div class="inputs">
-            <input type="text" id="in-pref" placeholder="都道府県名" autocomplete="off">
-            <input type="text" id="in-city" placeholder="県庁所在地" autocomplete="off">
-            <button id="check-btn" class="btn" onclick="judge()">回答</button>
-            <button id="skip-btn" class="btn" onclick="skip()">スキップ</button>
-        </div>
-        <div style="font-size: 11px; color: #666; cursor: pointer; margin-top: 10px;" onclick="clearData()">記録リセット</div>
+    <div class="ui">
+        <div id="msg">ロード中...</div>
+        <input type="text" id="in-pref" placeholder="都道府県" autocomplete="off">
+        <input type="text" id="in-city" placeholder="県庁所在地" autocomplete="off">
+        <button id="check-btn" onclick="judge()">回答</button>
+        <button id="skip-btn" onclick="skip()">次へ</button>
+        <div style="font-size: 10px; color: #666; margin-top: 10px; cursor: pointer;" onclick="localStorage.clear();location.reload();">リセット</div>
     </div>
 </div>
 
 <script>
-// 画像（1024x1024相当）の比率に基づいた精密座標
-// x: 左からの距離(0-1000), y: 上からの距離(0-1000)
+// 画像のピクセル位置(1024x1024基準)を直接指定。これでズレを封じ込めます。
 const japanData = [
-    {n:"北海道", c:"札幌市", x:750, y:145}, {n:"青森県", c:"青森市", x:643, y:285}, {n:"岩手県", c:"盛岡市", x:658, y:342},
-    {n:"宮城県", c:"仙台市", x:652, y:405}, {n:"秋田県", c:"秋田市", x:618, y:342}, {n:"山形県", c:"山形市", x:618, y:405},
-    {n:"福島県", c:"福島市", x:628, y:465}, {n:"茨城県", c:"水戸市", x:635, y:545}, {n:"栃木県", c:"宇都宮市", x:605, y:535},
-    {n:"群馬県", c:"前橋市", x:578, y:535}, {n:"埼玉県", c:"さいたま市", x:590, y:570}, {n:"千葉県", c:"千葉市", x:625, y:600},
-    {n:"東京都", c:"新宿区", x:590, y:590}, {n:"神奈川県", c:"横浜市", x:575, y:610}, {n:"新潟県", c:"新潟市", x:570, y:445},
-    {n:"富山県", c:"富山市", x:515, y:475}, {n:"石川県", c:"金沢市", x:485, y:465}, {n:"福井県", c:"福井市", x:460, y:520},
-    {n:"山梨県", c:"甲府市", x:550, y:590}, {n:"長野県", c:"長野市", x:540, y:530}, {n:"岐阜県", c:"岐阜市", x:505, y:570},
-    {n:"静岡県", c:"静岡市", x:545, y:635}, {n:"愛知県", c:"名古屋市", x:510, y:625}, {n:"三重県", c:"津市", x:490, y:660},
-    {n:"滋賀県", c:"大津市", x:470, y:590}, {n:"京都府", c:"京都市", x:445, y:590}, {n:"大阪府", c:"大阪市", x:440, y:625},
-    {n:"兵庫県", c:"神戸市", x:410, y:610}, {n:"奈良県", c:"奈良市", x:455, y:645}, {n:"和歌山県", c:"和歌山市", x:445, y:700},
-    {n:"鳥取県", c:"鳥取市", x:385, y:575}, {n:"島根県", c:"松江市", x:330, y:595}, {n:"岡山県", c:"岡山市", x:365, y:620},
-    {n:"広島県", c:"広島市", x:325, y:635}, {n:"山口県", c:"山口市", x:265, y:650}, {n:"徳島県", c:"徳島市", x:390, y:710},
-    {n:"香川県", c:"高松市", x:380, y:665}, {n:"愛媛県", c:"松山市", x:325, y:705}, {n:"高知県", c:"高知市", x:345, y:740},
-    {n:"福岡県", c:"福岡市", x:220, y:700}, {n:"佐賀県", c:"佐賀市", x:190, y:720}, {n:"長崎県", c:"長崎市", x:175, y:750},
-    {n:"熊本県", c:"熊本市", x:205, y:785}, {n:"大分県", c:"大分市", x:260, y:740}, {n:"宮崎県", c:"宮崎市", x:250, y:840},
-    {n:"鹿児島県", c:"鹿児島市", x:215, y:875}, {n:"沖縄県", c:"那覇市", x:880, y:870}
+    {n:"北海道", c:"札幌市", x:758, y:155}, {n:"青森県", c:"青森市", x:645, y:290}, {n:"岩手県", c:"盛岡市", x:670, y:345},
+    {n:"宮城県", c:"仙台市", x:665, y:410}, {n:"秋田県", c:"秋田市", x:630, y:345}, {n:"山形県", c:"山形市", x:630, y:410},
+    {n:"福島県", c:"福島市", x:640, y:475}, {n:"茨城県", c:"水戸市", x:645, y:555}, {n:"栃木県", c:"宇都宮市", x:615, y:545},
+    {n:"群馬県", c:"前橋市", x:590, y:545}, {n:"埼玉県", c:"さいたま市", x:600, y:580}, {n:"千葉県", c:"千葉市", x:635, y:615},
+    {n:"東京都", c:"新宿区", x:600, y:605}, {n:"神奈川県", c:"横浜市", x:585, y:625}, {n:"新潟県", c:"新潟市", x:578, y:455},
+    {n:"富山県", c:"富山市", x:525, y:485}, {n:"石川県", c:"金沢市", x:495, y:475}, {n:"福井県", c:"福井市", x:470, y:530},
+    {n:"山梨県", c:"甲府市", x:560, y:605}, {n:"長野県", c:"長野市", x:550, y:540}, {n:"岐阜県", c:"岐阜市", x:515, y:585},
+    {n:"静岡県", c:"静岡市", x:555, y:650}, {n:"愛知県", c:"名古屋市", x:518, y:640}, {n:"三重県", c:"津市", x:498, y:675},
+    {n:"滋賀県", c:"大津市", x:480, y:605}, {n:"京都府", c:"京都市", x:455, y:605}, {n:"大阪府", c:"大阪市", x:450, y:640},
+    {n:"兵庫県", c:"神戸市", x:420, y:625}, {n:"奈良県", c:"奈良市", x:465, y:660}, {n:"和歌山県", c:"和歌山市", x:455, y:715},
+    {n:"鳥取県", c:"鳥取市", x:395, y:585}, {n:"島根県", c:"松江市", x:340, y:605}, {n:"岡山県", c:"岡山市", x:375, y:630},
+    {n:"広島県", c:"広島市", x:335, y:645}, {n:"山口県", c:"山口市", x:275, y:665}, {n:"徳島県", c:"徳島市", x:400, y:725},
+    {n:"香川県", c:"高松市", x:390, y:680}, {n:"愛媛県", c:"松山市", x:335, y:720}, {n:"高知県", c:"高知市", x:355, y:755},
+    {n:"福岡県", c:"福岡市", x:230, y:715}, {n:"佐賀県", c:"佐賀市", x:200, y:735}, {n:"長崎県", c:"長崎市", x:185, y:765},
+    {n:"熊本県", c:"熊本市", x:215, y:800}, {n:"大分県", c:"大分市", x:270, y:755}, {n:"宮崎県", c:"宮崎市", x:260, y:855},
+    {n:"鹿児島県", c:"鹿児島市", x:225, y:890}, {n:"沖縄県", c:"那覇市", x:880, y:880}
 ];
 
-let cleared = JSON.parse(localStorage.getItem('jp_sat_final_fix')) || [];
+let cleared = JSON.parse(localStorage.getItem('jp_map_quiz_final')) || [];
 let target;
 
 function init() {
     const svg = document.getElementById('overlay-svg');
     svg.innerHTML = '';
     japanData.forEach((p, idx) => {
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", p.x);
-        circle.setAttribute("cy", p.y);
-        circle.setAttribute("id", "m-" + idx);
-        circle.classList.add(cleared.includes(p.n) ? "cleared-marker" : "target-marker");
-        circle.style.display = cleared.includes(p.n) ? "block" : "none";
-        svg.appendChild(circle);
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", p.x); c.setAttribute("cy", p.y);
+        c.setAttribute("id", "dot-" + idx);
+        c.classList.add(cleared.includes(p.n) ? "cleared-marker" : "target-marker");
+        c.style.display = cleared.includes(p.n) ? "block" : "none";
+        svg.appendChild(c);
     });
     next();
 }
 
 function next() {
     const remains = japanData.filter(p => !cleared.includes(p.n));
-    document.getElementById('count').innerText = cleared.length;
-    if(remains.length === 0) {
-        document.getElementById('msg').innerText = "🏆 日本列島完全制覇！";
-        return;
-    }
+    if(remains.length === 0) { document.getElementById('msg').innerText = "🎉 全県制覇！"; return; }
     target = remains[Math.floor(Math.random() * remains.length)];
-    document.getElementById('m-' + japanData.indexOf(target)).style.display = "block";
-    document.getElementById('in-pref').value = "";
-    document.getElementById('in-city').value = "";
-    document.getElementById('in-pref').focus();
+    document.getElementById('dot-' + japanData.indexOf(target)).style.display = "block";
+    document.getElementById('msg').innerText = "この赤い点はどこ？";
+    document.getElementById('in-pref').value = ""; document.getElementById('in-city').value = "";
 }
 
 function judge() {
     const p = document.getElementById('in-pref').value.trim();
     const c = document.getElementById('in-city').value.trim();
-    if(p === target.n && (c === target.c || (target.n === "東京都" && (c === "東京" || c === "新宿区")))) {
+    if(p === target.n && (c === target.c || (target.n === "東京都" && c === "東京"))) {
         document.getElementById('msg').innerText = "⭕ 正解！";
-        document.getElementById('msg').style.color = "#2ed573";
         cleared.push(target.n);
-        localStorage.setItem('jp_sat_final_fix', JSON.stringify(cleared));
-        document.getElementById('m-' + japanData.indexOf(target)).classList.replace("target-marker", "cleared-marker");
-        setTimeout(() => {
-            document.getElementById('msg').style.color = "#00d2d3";
-            document.getElementById('msg').innerText = "次はどこかな？";
-            next();
-        }, 1000);
+        localStorage.setItem('jp_map_quiz_final', JSON.stringify(cleared));
+        document.getElementById('dot-' + japanData.indexOf(target)).classList.replace("target-marker", "cleared-marker");
+        setTimeout(next, 800);
     } else {
-        document.getElementById('msg').innerText = "❌ 違うみたいだ…";
-        document.getElementById('msg').style.color = "#ff4757";
+        document.getElementById('msg').innerText = "❌ 不正解です。もう一度やり直すか、スキップしてください。";
     }
 }
 
-function skip() { 
-    document.getElementById('msg').innerText = "スキップしました";
-    next(); 
-}
-
-function clearData() {
-    if(confirm("データを完全に消去しますか？")) {
-        localStorage.removeItem('jp_sat_final_fix');
-        location.reload();
-    }
-}
-
+function skip() { next(); }
 document.addEventListener('keydown', e => { if(e.key === 'Enter') judge(); });
 window.onload = init;
 </script>
