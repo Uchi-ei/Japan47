@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>47都道府県・完全制覇クイズ</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #eef2f3; padding: 20px; color: #333; }
+        .container { background: white; max-width: 600px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; font-size: 1.4rem; margin-bottom: 10px; }
+        .progress-container { margin-bottom: 20px; }
+        progress { width: 100%; height: 20px; }
+        .question-box { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #3498db; }
+        .region { font-size: 0.9rem; color: #e67e22; font-weight: bold; }
+        .q-text { font-size: 1.2rem; margin: 10px 0; font-weight: bold; }
+        input { width: 80%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; transition: 0.3s; }
+        input:focus { border-color: #3498db; outline: none; }
+        button { padding: 12px 30px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+        button:hover { background: #2980b9; }
+        #result { margin-top: 20px; font-weight: bold; min-height: 1.5em; }
+        .reset-btn { background: #e74c3c; margin-top: 30px; padding: 5px 15px; font-size: 0.8rem; }
+        .reset-btn:hover { background: #c0392b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>47都道府県 完全制覇への道</h1>
+    
+    <div class="progress-container">
+        <div>現在の進捗: <span id="cleared-count">0</span> / 47</div>
+        <progress id="prog-bar" value="0" max="47"></progress>
+    </div>
+
+    <div id="game-area">
+        <div class="question-box">
+            <div id="region" class="region"></div>
+            <div class="q-text" id="q-text">読み込み中...</div>
+        </div>
+        
+        <input type="text" id="ans-pref" placeholder="県名（例：栃木県）" autocomplete="off"><br>
+        <input type="text" id="ans-city" placeholder="県庁所在地（例：宇都宮市）" autocomplete="off"><br>
+        
+        <button id="submit-btn" onclick="checkAnswer()">回答する</button>
+        <div id="result"></div>
+    </div>
+
+    <button class="reset-btn" onclick="resetData()">全データをリセットして最初から</button>
+</div>
+
+<script>
+const allData = [
+    {r:"北海道", p:"北海道", c:"札幌市"}, {r:"東北", p:"青森県", c:"青森市"}, {r:"東北", p:"岩手県", c:"盛岡市"},
+    {r:"東北", p:"宮城県", c:"仙台市"}, {r:"東北", p:"秋田県", c:"秋田市"}, {r:"東北", p:"山形県", c:"山形市"},
+    {r:"東北", p:"福島県", c:"福島市"}, {r:"関東", p:"茨城県", c:"水戸市"}, {r:"関東", p:"栃木県", c:"宇都宮市"},
+    {r:"関東", p:"群馬県", c:"前橋市"}, {r:"関東", p:"埼玉県", c:"さいたま市"}, {r:"関東", p:"千葉県", c:"千葉市"},
+    {r:"関東", p:"東京都", c:"新宿区"}, {r:"関東", p:"神奈川県", c:"横浜市"}, {r:"中部", p:"新潟県", c:"新潟市"},
+    {r:"中部", p:"富山県", c:"富山市"}, {r:"中部", p:"石川県", c:"金沢市"}, {r:"中部", p:"福井県", c:"福井市"},
+    {r:"中部", p:"山梨県", c:"甲府市"}, {r:"中部", p:"長野県", c:"長野市"}, {r:"中部", p:"岐阜県", c:"岐阜市"},
+    {r:"中部", p:"静岡県", c:"静岡市"}, {r:"中部", p:"愛知県", c:"名古屋市"}, {r:"近畿", p:"三重県", c:"津市"},
+    {r:"近畿", p:"滋賀県", c:"大津市"}, {r:"近畿", p:"京都府", c:"京都市"}, {r:"近畿", p:"大阪府", c:"大阪市"},
+    {r:"近畿", p:"兵庫県", c:"神戸市"}, {r:"近畿", p:"奈良県", c:"奈良市"}, {r:"近畿", p:"和歌山県", c:"和歌山市"},
+    {r:"中国", p:"鳥取県", c:"鳥取市"}, {r:"中国", p:"島根県", c:"松江市"}, {r:"中国", p:"岡山県", c:"岡山市"},
+    {r:"中国", p:"広島県", c:"広島市"}, {r:"中国", p:"山口県", c:"山口市"}, {r:"四国", p:"徳島県", c:"徳島市"},
+    {r:"四国", p:"香川県", c:"高松市"}, {r:"四国", p:"愛媛県", c:"松山市"}, {r:"四国", p:"高知県", c:"高知市"},
+    {r:"九州", p:"福岡県", c:"福岡市"}, {r:"九州", p:"佐賀県", c:"佐賀市"}, {r:"九州", p:"長崎県", c:"長崎市"},
+    {r:"九州", p:"熊本県", c:"熊本市"}, {r:"九州", p:"大分県", c:"大分市"}, {r:"九州", p:"宮崎県", c:"宮崎市"},
+    {r:"九州", p:"鹿児島県", c:"鹿児島市"}, {r:"九州", p:"沖縄県", c:"那覇市"}
+];
+
+let clearedPrefs = JSON.parse(localStorage.getItem('cleared_japan_quiz')) || [];
+let currentQ;
+
+function updateUI() {
+    document.getElementById('cleared-count').innerText = clearedPrefs.length;
+    document.getElementById('prog-bar').value = clearedPrefs.length;
+}
+
+function nextQuestion() {
+    updateUI();
+    
+    // まだ正解していない問題だけを抽出
+    const remaining = allData.filter(d => !clearedPrefs.includes(d.p));
+    
+    if (remaining.length === 0) {
+        document.getElementById('game-area').innerHTML = "<h2>🎉 おめでとうございます！全47都道府県を制覇しました！</h2>";
+        return;
+    }
+    
+    currentQ = remaining[Math.floor(Math.random() * remaining.length)];
+    document.getElementById('region').innerText = `【${currentQ.r}地方】`;
+    document.getElementById('q-text').innerText = "ここにある都道府県と県庁所在地は？";
+    document.getElementById('ans-pref').value = "";
+    document.getElementById('ans-city').value = "";
+    document.getElementById('result').innerText = "";
+    document.getElementById('submit-btn').disabled = false;
+}
+
+function checkAnswer() {
+    const userPref = document.getElementById('ans-pref').value.trim();
+    const userCity = document.getElementById('ans-city').value.trim();
+    
+    if (userPref === currentQ.p && userCity === currentQ.c) {
+        document.getElementById('result').innerText = `⭕ 正解！${currentQ.p}クリア！`;
+        document.getElementById('result').style.color = "green";
+        document.getElementById('submit-btn').disabled = true;
+        
+        // クリア済みリストに追加して保存
+        clearedPrefs.push(currentQ.p);
+        localStorage.setItem('cleared_japan_quiz', JSON.stringify(clearedPrefs));
+        
+        setTimeout(nextQuestion, 1500);
+    } else {
+        document.getElementById('result').innerText = "❌ 違います。もう一度考えてみよう！";
+        document.getElementById('result').style.color = "red";
+    }
+}
+
+function resetData() {
+    if (confirm("これまでの進捗をすべて消去しますか？")) {
+        localStorage.removeItem('cleared_japan_quiz');
+        location.reload();
+    }
+}
+
+// エンターキーでも回答できるように
+document.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        checkAnswer();
+    }
+});
+
+nextQuestion();
+</script>
+</body>
+</html>
