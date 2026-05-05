@@ -4,89 +4,102 @@
     <meta charset="UTF-8">
     <title>日本列島 リアル地図クイズ</title>
     <style>
-        body { font-family: 'Hiragino Kaku Gothic ProN', sans-serif; background: #2c3e50; margin: 0; padding: 20px; color: white; text-align: center; }
-        .container { background: #34495e; max-width: 900px; margin: auto; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        body { font-family: 'Hiragino Kaku Gothic ProN', sans-serif; background: #1a1a1a; margin: 0; padding: 10px; color: white; text-align: center; }
+        .container { background: #2d2d2d; max-width: 900px; margin: auto; padding: 15px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        /* 地図エリア：背景にご提示の画像を敷く想定 */
+        /* 地図エリア */
         #map-area { 
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Japan_location_map_with_side_map_of_the_Ryukyu_Islands.png/1024px-Japan_location_map_with_side_map_of_the_Ryukyu_Islands.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-color: #aadaff;
-            border-radius: 10px; 
-            margin-bottom: 20px; 
             position: relative; 
-            height: 600px; 
-            border: 4px solid #2c3e50;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 15px;
+            aspect-ratio: 800 / 700; /* 画像の縦横比に合わせる */
+            background-color: #001529;
+            border: 2px solid #444;
+            overflow: hidden;
+        }
+
+        /* 背景画像の設定 */
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 画像全体を収める */
+            z-index: 1;
         }
         
-        svg { width: 100%; height: 100%; }
-        /* 出題中のマーカー（矢印の代わりに光る円） */
-        .target-marker { fill: #ff4757; stroke: white; stroke-width: 2; filter: drop-shadow(0 0 8px red); transition: 0.3s; }
-        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; opacity: 0.7; }
+        svg { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2; /* 画像の上に重ねる */
+        }
+
+        .target-marker { fill: #ff4757; stroke: white; stroke-width: 2; filter: drop-shadow(0 0 5px red); transition: 0.3s; r: 8; }
+        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; opacity: 0.8; r: 5; }
         
-        .ui-section { display: flex; flex-direction: column; gap: 15px; align-items: center; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
-        .inputs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        input { padding: 12px; border: none; border-radius: 8px; font-size: 16px; width: 180px; }
+        .ui-section { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
+        .inputs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
+        input { padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 160px; }
         
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        #check-btn { background: #1e90ff; color: white; }
-        #skip-btn { background: #f39c12; color: white; }
-        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+        .btn { padding: 12px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        #check-btn { background: #00a8ff; color: white; }
+        #skip-btn { background: #fbc531; color: #2f3640; }
+        .btn:hover { opacity: 0.8; }
         
-        #msg { font-size: 1.2rem; font-weight: bold; height: 1.5em; color: #feca57; }
-        .progress-bar { width: 100%; background: #2c3e50; height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; }
-        #progress-fill { width: 0%; height: 100%; background: #2ed573; transition: 0.5s; }
+        #msg { font-size: 1.1rem; font-weight: bold; height: 1.5em; margin-bottom: 10px; color: #00d2d3; }
+        .progress-info { font-size: 0.9rem; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>日本列島 リアル地形クイズ</h1>
-    <div>クリア: <span id="count">0</span> / 47</div>
-    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>日本列島 リアル地図クイズ</h1>
+    <div class="progress-info">制覇: <span id="count">0</span> / 47</div>
     
     <div id="map-area">
-        <svg viewBox="0 0 800 600" id="japan-svg">
-            </svg>
+        <img id="bg-image" src="map.jpg" alt="日本地図読み込み中...">
+        <svg viewBox="0 0 800 700" id="japan-svg"></svg>
     </div>
 
     <div class="ui-section">
-        <div id="msg">赤いマーカーの場所を答えてください</div>
+        <div id="msg">赤い点を答えてください</div>
         <div class="inputs">
-            <input type="text" id="in-pref" placeholder="県名" autocomplete="off">
+            <input type="text" id="in-pref" placeholder="都道府県名" autocomplete="off">
             <input type="text" id="in-city" placeholder="県庁所在地" autocomplete="off">
-            <button id="check-btn" class="btn" onclick="judge()">回答！</button>
+            <button id="check-btn" class="btn" onclick="judge()">回答</button>
             <button id="skip-btn" class="btn" onclick="skip()">スキップ</button>
         </div>
+        <div style="font-size: 11px; color: #888; cursor: pointer; margin-top: 10px;" onclick="clearData()">記録リセット</div>
     </div>
-    
-    <p style="font-size: 12px; color: #bdc3c7; cursor: pointer; margin-top: 20px;" onclick="clearData()">進捗をリセット</p>
 </div>
 
 <script>
-// 地図画像に合わせた座標データ
+// 画像（image_00871a.jpg）の配置に合わせた座標データ（微調整済み）
 const japanData = [
-    {n:"北海道", c:"札幌市", x:605, y:80}, {n:"青森県", c:"青森市", x:570, y:175}, {n:"岩手県", c:"盛岡市", x:590, y:215},
-    {n:"宮城県", c:"仙台市", x:585, y:260}, {n:"秋田県", c:"秋田市", x:555, y:210}, {n:"山形県", c:"山形市", x:555, y:260},
-    {n:"福島県", c:"福島市", x:565, y:305}, {n:"茨城県", c:"水戸市", x:570, y:365}, {n:"栃木県", c:"宇都宮市", x:545, y:355},
-    {n:"群馬県", c:"前橋市", x:525, y:355}, {n:"埼玉県", c:"さいたま市", x:535, y:380}, {n:"千葉県", c:"千葉市", x:565, y:405},
-    {n:"東京都", c:"新宿区", x:535, y:400}, {n:"神奈川県", c:"横浜市", x:520, y:415}, {n:"新潟県", x:515, y:295, c:"新潟市"},
-    {n:"富山県", c:"富山市", x:470, y:325}, {n:"石川県", c:"金沢市", x:445, y:315}, {n:"福井県", c:"福井市", x:425, y:350},
-    {n:"山梨県", c:"甲府市", x:500, y:395}, {n:"長野県", c:"長野市", x:490, y:355}, {n:"岐阜県", c:"岐阜市", x:455, y:385},
-    {n:"静岡県", c:"静岡市", x:495, y:430}, {n:"愛知県", c:"名古屋市", x:460, y:415}, {n:"三重県", c:"津市", x:440, y:440},
-    {n:"滋賀県", c:"大津市", x:425, y:395}, {n:"京都府", c:"京都市", x:405, y:395}, {n:"大阪府", c:"大阪市", x:400, y:420},
-    {n:"兵庫県", c:"神戸市", x:375, y:405}, {n:"奈良県", c:"奈良市", x:415, y:435}, {n:"和歌山県", c:"和歌山市", x:405, y:470},
-    {n:"鳥取県", c:"鳥取市", x:350, y:380}, {n:"島根県", c:"松江市", x:305, y:395}, {n:"岡山県", c:"岡山市", x:335, y:415},
-    {n:"広島県", c:"広島市", x:300, y:430}, {n:"山口県", c:"山口市", x:250, y:440}, {n:"徳島県", c:"徳島市", x:350, y:475},
-    {n:"香川県", c:"高松市", x:340, y:445}, {n:"愛媛県", c:"松山市", x:295, y:475}, {n:"高知県", c:"高知市", x:315, y:505},
-    {n:"福岡県", c:"福岡市", x:205, y:465}, {n:"佐賀県", c:"佐賀市", x:180, y:480}, {n:"長崎県", c:"長崎市", x:165, y:500},
-    {n:"熊本県", c:"熊本市", x:195, y:520}, {n:"大分県", c:"大分市", x:240, y:495}, {n:"宮崎県", c:"宮崎市", x:225, y:555},
-    {n:"鹿児島県", c:"鹿児島市", x:195, y:580}, {n:"沖縄県", c:"那覇市", x:120, y:580}
+    {n:"北海道", c:"札幌市", x:600, y:120}, {n:"青森県", c:"青森市", x:565, y:230}, {n:"岩手県", c:"盛岡市", x:585, y:280},
+    {n:"宮城県", c:"仙台市", x:580, y:330}, {n:"秋田県", c:"秋田市", x:550, y:280}, {n:"山形県", c:"山形市", x:550, y:330},
+    {n:"福島県", c:"福島市", x:560, y:380}, {n:"茨城県", c:"水戸市", x:565, y:450}, {n:"栃木県", c:"宇都宮市", x:540, y:440},
+    {n:"群馬県", c:"前橋市", x:520, y:440}, {n:"埼玉県", c:"さいたま市", x:530, y:470}, {n:"千葉県", c:"千葉市", x:560, y:500},
+    {n:"東京都", c:"新宿区", x:530, y:490}, {n:"神奈川県", c:"横浜市", x:515, y:510}, {n:"新潟県", x:510, y:370, c:"新潟市"},
+    {n:"富山県", c:"富山市", x:460, y:410}, {n:"石川県", c:"金沢市", x:435, y:400}, {n:"福井県", c:"福井市", x:415, y:440},
+    {n:"山梨県", c:"甲府市", x:490, y:490}, {n:"長野県", c:"長野市", x:480, y:445}, {n:"岐阜県", c:"岐阜市", x:445, y:480},
+    {n:"静岡県", c:"静岡市", x:485, y:530}, {n:"愛知県", c:"名古屋市", x:450, y:520}, {n:"三重県", c:"津市", x:430, y:550},
+    {n:"滋賀県", c:"大津市", x:415, y:495}, {n:"京都府", c:"京都市", x:395, y:495}, {n:"大阪府", c:"大阪市", x:390, y:525},
+    {n:"兵庫県", c:"神戸市", x:365, y:505}, {n:"奈良県", c:"奈良市", x:405, y:540}, {n:"和歌山県", c:"和歌山市", x:395, y:580},
+    {n:"鳥取県", c:"鳥取市", x:340, y:480}, {n:"島根県", c:"松江市", x:295, y:495}, {n:"岡山県", c:"岡山市", x:325, y:520},
+    {n:"広島県", c:"広島市", x:290, y:540}, {n:"山口県", c:"山口市", x:240, y:550}, {n:"徳島県", c:"徳島市", x:340, y:590},
+    {n:"香川県", c:"高松市", x:330, y:555}, {n:"愛媛県", c:"松山市", x:285, y:590}, {n:"高知県", c:"高知市", x:305, y:625},
+    {n:"福岡県", c:"福岡市", x:195, y:580}, {n:"佐賀県", c:"佐賀市", x:170, y:600}, {n:"長崎県", c:"長崎市", x:155, y:625},
+    {n:"熊本県", c:"熊本市", x:185, y:650}, {n:"大分県", c:"大分市", x:230, y:620}, {n:"宮崎県", c:"宮崎市", x:215, y:690},
+    {n:"鹿児島県", c:"鹿児島市", x:185, y:720}, {n:"沖縄県", c:"那覇市", x:110, y:720}
 ];
 
-let cleared = JSON.parse(localStorage.getItem('jp_real_quiz')) || [];
+let cleared = JSON.parse(localStorage.getItem('jp_satellite_quiz')) || [];
 let target;
 
 function init() {
@@ -96,7 +109,6 @@ function init() {
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("cx", p.x);
         circle.setAttribute("cy", p.y);
-        circle.setAttribute("r", 6);
         circle.setAttribute("id", "m-" + idx);
         circle.classList.add(cleared.includes(p.n) ? "cleared-marker" : "target-marker");
         circle.style.display = cleared.includes(p.n) ? "block" : "none";
@@ -108,18 +120,15 @@ function init() {
 function next() {
     const remains = japanData.filter(p => !cleared.includes(p.n));
     document.getElementById('count').innerText = cleared.length;
-    document.getElementById('progress-fill').style.width = (cleared.length / 47 * 100) + "%";
     
     if(remains.length === 0) {
-        document.getElementById('msg').innerText = "🏆 日本列島完全制覇！";
+        document.getElementById('msg').innerText = "🏆 ミッションコンプリート！";
         return;
     }
     
     target = remains[Math.floor(Math.random() * remains.length)];
     const idx = japanData.indexOf(target);
-    const m = document.getElementById('m-' + idx);
-    m.style.display = "block";
-    m.classList.add("target-marker");
+    document.getElementById('m-' + idx).style.display = "block";
     
     document.getElementById('in-pref').value = "";
     document.getElementById('in-city').value = "";
@@ -129,32 +138,25 @@ function next() {
 function judge() {
     const p = document.getElementById('in-pref').value.trim();
     const c = document.getElementById('in-city').value.trim();
-    const msg = document.getElementById('msg');
     
     if(p === target.n && c === target.c) {
-        msg.innerText = "⭕ 正解！";
-        msg.style.color = "#2ed573";
+        document.getElementById('msg').innerText = "⭕ 正解！";
         cleared.push(target.n);
-        localStorage.setItem('jp_real_quiz', JSON.stringify(cleared));
+        localStorage.setItem('jp_satellite_quiz', JSON.stringify(cleared));
         const idx = japanData.indexOf(target);
         const m = document.getElementById('m-' + idx);
-        m.classList.remove("target-marker");
-        m.classList.add("cleared-marker");
-        setTimeout(() => { msg.style.color = "#feca57"; msg.innerText = "次の場所は？"; next(); }, 1000);
+        m.classList.replace("target-marker", "cleared-marker");
+        setTimeout(next, 800);
     } else {
-        msg.innerText = "❌ まちがい！";
-        msg.style.color = "#ff4757";
+        document.getElementById('msg').innerText = "❌ 不正解...";
     }
 }
 
-function skip() {
-    document.getElementById('msg').innerText = "スキップしました";
-    next();
-}
+function skip() { next(); }
 
 function clearData() {
-    if(confirm("データを削除しますか？")) {
-        localStorage.removeItem('jp_real_quiz');
+    if(confirm("リセットしますか？")) {
+        localStorage.removeItem('jp_satellite_quiz');
         location.reload();
     }
 }
