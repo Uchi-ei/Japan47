@@ -10,20 +10,21 @@
         
         #map-area { 
             position: relative; 
-            display: inline-block; /* 画像のサイズに合わせる */
+            display: inline-block;
             margin: 0 auto 15px;
             background-color: #001529;
             line-height: 0;
             max-width: 100%;
+            border: 2px solid #444;
         }
 
         #bg-image {
-            max-width: 100%;
+            width: 800px; /* 画像の基準幅 */
             height: auto;
+            max-width: 100%;
             display: block;
         }
         
-        /* 座標がズレないように画像に完全に重ねる */
         #overlay-svg { 
             position: absolute;
             top: 0;
@@ -32,8 +33,8 @@
             height: 100%;
         }
 
-        .target-marker { fill: #ff4757; stroke: white; stroke-width: 2; filter: drop-shadow(0 0 5px red); transition: 0.3s; r: 1.2%; }
-        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; opacity: 0.8; r: 0.8%; }
+        .target-marker { fill: #ff4757; stroke: white; stroke-width: 2; filter: drop-shadow(0 0 5px red); transition: 0.3s; r: 8; }
+        .cleared-marker { fill: #2ed573; stroke: white; stroke-width: 1; opacity: 0.8; r: 6; }
         
         .ui-section { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
         .inputs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
@@ -54,8 +55,8 @@
     <div class="progress-info">制覇: <span id="count">0</span> / 47</div>
     
     <div id="map-area">
-        <img id="bg-image" src="image_00871a.jpg" alt="地図読み込み中">
-        <svg id="overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <img id="bg-image" src="map.jpg" alt="地図読み込み中">
+        <svg id="overlay-svg" viewBox="0 0 800 700"></svg>
     </div>
 
     <div class="ui-section">
@@ -71,27 +72,27 @@
 </div>
 
 <script>
-// 画像内の位置（％）で指定：これで画像のサイズが変わってもズレません
+// 画像（800x700想定）に合わせて全ての座標を微調整
 const japanData = [
-    {n:"北海道", c:"札幌市", x:75, y:15}, {n:"青森県", c:"青森市", x:62, y:28}, {n:"岩手県", c:"盛岡市", x:64, y:34},
-    {n:"宮城県", c:"仙台市", x:64, y:40}, {n:"秋田県", c:"秋田市", x:60, y:34}, {n:"山形県", c:"山形市", x:60, y:40},
-    {n:"福島県", c:"福島市", x:61, y:46}, {n:"茨城県", c:"水戸市", x:61, y:54}, {n:"栃木県", c:"宇都宮市", x:58, y:51},
-    {n:"群馬県", c:"前橋市", x:55, y:51}, {n:"埼玉県", c:"さいたま市", x:56, y:55}, {n:"千葉県", c:"千葉市", x:59, y:58},
-    {n:"東京都", c:"新宿区", x:56, y:57}, {n:"神奈川県", c:"横浜市", x:55, y:59}, {n:"新潟県", c:"新潟市", x:53, y:42},
-    {n:"富山県", c:"富山市", x:49, y:46}, {n:"石川県", c:"金沢市", x:45, y:45}, {n:"福井県", c:"福井市", x:43, y:50},
-    {n:"山梨県", c:"甲府市", x:52, y:56}, {n:"長野県", c:"長野市", x:50, y:51}, {n:"岐阜県", c:"岐阜市", x:47, y:54},
-    {n:"静岡県", c:"静岡市", x:51, y:60}, {n:"愛知県", c:"名古屋市", x:47, y:59}, {n:"三重県", c:"津市", x:45, y:63},
-    {n:"滋賀県", c:"大津市", x:43, y:56}, {n:"京都府", c:"京都市", x:40, y:56}, {n:"大阪府", c:"大阪市", x:40, y:59},
-    {n:"兵庫県", c:"神戸市", x:37, y:57}, {n:"奈良県", c:"奈良市", x:41, y:62}, {n:"和歌山県", c:"和歌山市", x:41, y:67},
-    {n:"鳥取県", c:"鳥取市", x:34, y:54}, {n:"島根県", c:"松江市", x:29, y:55}, {n:"岡山県", c:"岡山市", x:32, y:58},
-    {n:"広島県", c:"広島市", x:28, y:60}, {n:"山口県", c:"山口市", x:23, y:62}, {n:"徳島県", c:"徳島市", x:35, y:67},
-    {n:"香川県", c:"高松市", x:34, y:64}, {n:"愛媛県", c:"松山市", x:29, y:66}, {n:"高知県", c:"高知市", x:31, y:69},
-    {n:"福岡県", c:"福岡市", x:20, y:65}, {n:"佐賀県", c:"佐賀市", x:18, y:67}, {n:"長崎県", c:"長崎市", x:15, y:69},
-    {n:"熊本県", c:"熊本市", x:19, y:72}, {n:"大分県", c:"大分市", x:24, y:69}, {n:"宮崎県", c:"宮崎市", x:23, y:77},
-    {n:"鹿児島県", c:"鹿児島市", x:20, y:81}, {n:"沖縄県", c:"那覇市", x:88, y:88}
+    {n:"北海道", c:"札幌市", x:600, y:120}, {n:"青森県", c:"青森市", x:540, y:210}, {n:"岩手県", c:"盛岡市", x:565, y:260},
+    {n:"宮城県", c:"仙台市", x:560, y:315}, {n:"秋田県", c:"秋田市", x:525, y:265}, {n:"山形県", c:"山形市", x:525, y:315},
+    {n:"福島県", c:"福島市", x:535, y:370}, {n:"茨城県", c:"水戸市", x:540, y:440}, {n:"栃木県", c:"宇都宮市", x:515, y:430},
+    {n:"群馬県", c:"前橋市", x:490, y:430}, {n:"埼玉県", c:"さいたま市", x:500, y:460}, {n:"千葉県", c:"千葉市", x:535, y:490},
+    {n:"東京都", c:"新宿区", x:500, y:480}, {n:"神奈川県", c:"横浜市", x:485, y:500}, {n:"新潟県", c:"新潟市", x:480, y:355},
+    {n:"富山県", c:"富山市", x:425, y:385}, {n:"石川県", c:"金沢市", x:395, y:370}, {n:"福井県", c:"福井市", x:375, y:420},
+    {n:"山梨県", c:"甲府市", x:465, y:480}, {n:"長野県", c:"長野市", x:455, y:425}, {n:"岐阜県", c:"岐阜市", x:420, y:460},
+    {n:"静岡県", c:"静岡市", x:460, y:520}, {n:"愛知県", c:"名古屋市", x:425, y:510}, {n:"三重県", c:"津市", x:405, y:540},
+    {n:"滋賀県", c:"大津市", x:385, y:475}, {n:"京都府", c:"京都市", x:365, y:475}, {n:"大阪府", c:"大阪市", x:360, y:505},
+    {n:"兵庫県", c:"神戸市", x:335, y:485}, {n:"奈良県", c:"奈良市", x:375, y:520}, {n:"和歌山県", c:"和歌山市", x:365, y:565},
+    {n:"鳥取県", c:"鳥取市", x:310, y:460}, {n:"島根県", c:"松江市", x:265, y:475}, {n:"岡山県", c:"岡山市", x:295, y:500},
+    {n:"広島県", c:"広島市", x:260, y:515}, {n:"山口県", c:"山口市", x:205, y:525}, {n:"徳島県", c:"徳島市", x:315, y:575},
+    {n:"香川県", c:"高松市", x:305, y:535}, {n:"愛媛県", c:"松山市", x:255, y:570}, {n:"高知県", c:"高知市", x:275, y:600},
+    {n:"福岡県", c:"福岡市", x:165, y:565}, {n:"佐賀県", c:"佐賀市", x:140, y:580}, {n:"長崎県", c:"長崎市", x:125, y:605},
+    {n:"熊本県", c:"熊本市", x:155, y:630}, {n:"大分県", c:"大分市", x:200, y:600}, {n:"宮崎県", c:"宮崎市", x:190, y:680},
+    {n:"鹿児島県", c:"鹿児島市", x:160, y:710}, {n:"沖縄県", c:"那覇市", x:710, y:700}
 ];
 
-let cleared = JSON.parse(localStorage.getItem('jp_sat_final_v3')) || [];
+let cleared = JSON.parse(localStorage.getItem('jp_sat_precise')) || [];
 let target;
 
 function init() {
@@ -126,10 +127,10 @@ function next() {
 function judge() {
     const p = document.getElementById('in-pref').value.trim();
     const c = document.getElementById('in-city').value.trim();
-    if(p === target.n && (c === target.c || (target.n === "東京都" && c === "新宿区"))) {
+    if(p === target.n && (c === target.c || (target.n === "東京都" && (c === "新宿区" || c === "東京")))) {
         document.getElementById('msg').innerText = "⭕ 正解！";
         cleared.push(target.n);
-        localStorage.setItem('jp_sat_final_v3', JSON.stringify(cleared));
+        localStorage.setItem('jp_sat_precise', JSON.stringify(cleared));
         document.getElementById('m-' + japanData.indexOf(target)).classList.replace("target-marker", "cleared-marker");
         setTimeout(next, 800);
     } else {
@@ -141,7 +142,7 @@ function skip() { next(); }
 
 function clearData() {
     if(confirm("データを消去しますか？")) {
-        localStorage.removeItem('jp_sat_final_v3');
+        localStorage.removeItem('jp_sat_precise');
         location.reload();
     }
 }
