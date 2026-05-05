@@ -2,160 +2,167 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>日本地図・矢印クイズ</title>
+    <title>47都道府県・形状判別クイズ</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f4f8; margin: 0; padding: 20px; }
-        .container { background: white; max-width: 800px; margin: auto; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; width: 95%; max-width: 900px; margin: 20px; padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
         
-        /* 地図のスタイル */
-        #map-container { position: relative; width: 100%; max-width: 500px; margin: 20px auto; background: #e0f7fa; border-radius: 10px; }
-        svg { width: 100%; height: auto; }
-        .pref { fill: #ffffff; stroke: #666; stroke-width: 0.5; transition: fill 0.3s; }
-        .highlight { fill: #ff7675 !important; } /* 出題中の県を赤くする */
-        .cleared { fill: #55efc4 !important; }   /* 正解済みの県を緑にする */
+        /* 地図エリア */
+        #map-container { width: 100%; height: 500px; background: #e3f2fd; border-radius: 10px; position: relative; margin-bottom: 20px; overflow: hidden; }
+        svg { width: 100%; height: 100%; }
+        path { fill: #ffffff; stroke: #999; stroke-width: 0.2; transition: fill 0.2s; }
+        .highlight { fill: #ff5252 !important; stroke: #b71c1c; stroke-width: 0.5; }
+        .cleared { fill: #a5d6a7 !important; }
 
-        /* クイズ部分のスタイル */
-        .quiz-ui { margin-top: 20px; }
-        input { padding: 10px; margin: 5px; border: 2px solid #ddd; border-radius: 5px; width: 180px; }
-        button { padding: 10px 20px; background: #0984e3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #74b9ff; }
+        /* 入力エリア */
+        .ui-panel { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        input { padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 200px; font-size: 16px; }
+        button { padding: 12px 30px; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        button:hover { background: #1565c0; }
         
-        #result { margin-top: 15px; font-weight: bold; height: 1.5em; }
-        .stats { color: #636e72; font-size: 0.9rem; margin-top: 10px; }
+        #message { font-weight: bold; font-size: 1.1rem; height: 1.5em; margin: 10px 0; }
+        .progress { color: #666; font-size: 0.9rem; }
+        .reset-btn { margin-top: 20px; background: #9e9e9e; font-size: 12px; padding: 5px 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>日本地図クイズ (残り<span id="remain-count">47</span>県)</h1>
+    <h1>日本列島 完遂クイズ</h1>
+    <div class="progress">残り: <span id="remain-count">47</span> / 47 県</div>
     
     <div id="map-container">
-        <svg viewBox="0 0 500 500" id="japan-map">
+        <svg viewBox="0 0 800 600" id="japan-svg">
             </svg>
     </div>
 
-    <div class="quiz-ui">
-        <p>赤い矢印（ハイライト）の場所はどこ？</p>
-        <input type="text" id="ans-pref" placeholder="県名（例：東京都）">
-        <input type="text" id="ans-city" placeholder="県庁所在地（例：新宿区）">
-        <button onclick="checkAnswer()">回答</button>
-        <div id="result"></div>
+    <div class="ui-panel">
+        <div id="message">赤色の場所を答えてください</div>
+        <div class="input-group">
+            <input type="text" id="ans-pref" placeholder="県名（例：神奈川県）" autocomplete="off">
+            <input type="text" id="ans-city" placeholder="県庁所在地（例：横浜市）" autocomplete="off">
+            <button onclick="checkAnswer()">回答する</button>
+        </div>
     </div>
     
-    <button style="margin-top:20px; background:#fab1a0;" onclick="resetGame()">データをリセット</button>
+    <button class="reset-btn" onclick="resetGame()">データをリセット</button>
 </div>
 
 <script>
-// 都道府県データ（位置座標はおおよその目安です）
-const prefs = [
-    { name: "北海道", city: "札幌市", x: 400, y: 50 },
-    { name: "青森県", city: "青森市", x: 380, y: 130 },
-    { name: "岩手県", city: "盛岡市", x: 390, y: 160 },
-    { name: "宮城県", city: "仙台市", x: 385, y: 190 },
-    { name: "秋田県", city: "秋田市", x: 365, y: 160 },
-    { name: "山形県", city: "山形市", x: 365, y: 190 },
-    { name: "福島県", city: "福島市", x: 375, y: 220 },
-    { name: "茨城県", city: "水戸市", x: 370, y: 260 },
-    { name: "栃木県", city: "宇都宮市", x: 355, y: 250 },
-    { name: "群馬県", city: "前橋市", x: 340, y: 250 },
-    { name: "埼玉県", city: "さいたま市", x: 345, y: 270 },
-    { name: "千葉県", city: "千葉市", x: 365, y: 290 },
-    { name: "東京都", city: "新宿区", x: 345, y: 285 },
-    { name: "神奈川県", city: "横浜市", x: 335, y: 300 },
-    { name: "新潟県", city: "新潟市", x: 340, y: 210 },
-    { name: "富山県", city: "富山市", x: 305, y: 230 },
-    { name: "石川県", city: "金沢市", x: 285, y: 220 },
-    { name: "福井県", city: "福井市", x: 275, y: 250 },
-    { name: "山梨県", city: "甲府市", x: 320, y: 280 },
-    { name: "長野県", city: "長野市", x: 315, y: 250 },
-    { name: "岐阜県", city: "岐阜市", x: 290, y: 275 },
-    { name: "静岡県", city: "静岡市", x: 315, y: 310 },
-    { name: "愛知県", city: "名古屋市", x: 295, y: 300 },
-    { name: "三重県", city: "津市", x: 275, y: 315 },
-    { name: "滋賀県", city: "大津市", x: 265, y: 280 },
-    { name: "京都府", city: "京都市", x: 250, y: 280 },
-    { name: "大阪府", city: "大阪市", x: 245, y: 300 },
-    { name: "兵庫県", city: "神戸市", x: 225, y: 290 },
-    { name: "奈良県", city: "奈良市", x: 255, y: 310 },
-    { name: "和歌山県", city: "和歌山市", x: 245, y: 335 },
-    { name: "鳥取県", city: "鳥取市", x: 205, y: 275 },
-    { name: "島根県", city: "松江市", x: 175, y: 285 },
-    { name: "岡山県", city: "岡山市", x: 195, y: 300 },
-    { name: "広島県", city: "広島市", x: 170, y: 310 },
-    { name: "山口県", city: "山口市", x: 135, y: 320 },
-    { name: "徳島県", city: "徳島市", x: 210, y: 345 },
-    { name: "香川県", city: "高松市", x: 200, y: 325 },
-    { name: "愛媛県", city: "松山市", x: 170, y: 345 },
-    { name: "高知県", city: "高知市", x: 185, y: 365 },
-    { name: "福岡県", city: "福岡市", x: 100, y: 340 },
-    { name: "佐賀県", city: "佐賀市", x: 80, y: 350 },
-    { name: "長崎県", city: "長崎市", x: 65, y: 365 },
-    { name: "熊本県", city: "熊本市", x: 90, y: 380 },
-    { name: "大分県", city: "大分市", x: 120, y: 365 },
-    { name: "宮崎県", city: "宮崎市", x: 110, y: 410 },
-    { name: "鹿児島県", city: "鹿児島市", x: 85, y: 430 },
-    { name: "沖縄県", city: "那覇市", x: 50, y: 460 }
+// 簡易化したSVGパスデータ（軽量化のため主要な形状のみ）
+// 実際にはより詳細な座標が入りますが、ここでは1枚に収めるため構造を定義
+const prefData = [
+    {id: 1, name: "北海道", city: "札幌市", d: "M604,119 l10,-24 l25,-10 l20,5 l20,40 l-30,40 l-40,10 l-25,-30 Z"},
+    {id: 2, name: "青森県", city: "青森市", d: "M584,179 l30,5 l10,25 l-25,10 l-25,-20 Z"},
+    {id: 3, name: "岩手県", city: "盛岡市", d: "M594,209 l25,10 l0,45 l-25,-10 Z"},
+    {id: 4, name: "宮城県", city: "仙台市", d: "M594,264 l25,10 l-10,35 l-20,-10 Z"},
+    {id: 5, name: "秋田県", city: "秋田市", d: "M569,209 l25,0 l0,45 l-25,-10 Z"},
+    {id: 6, name: "山形県", city: "山形市", d: "M569,254 l25,10 l0,35 l-25,-10 Z"},
+    {id: 7, name: "福島県", city: "福島市", d: "M559,299 l50,5 l-5,40 l-45,-10 Z"},
+    {id: 8, name: "茨城県", city: "水戸市", d: "M584,344 l15,10 l-5,35 l-15,-10 Z"},
+    {id: 9, name: "栃木県", city: "宇都宮市", d: "M564,344 l20,0 l0,35 l-20,-10 Z"},
+    {id: 10, name: "群馬県", city: "前橋市", d: "M539,344 l25,0 l0,35 l-25,0 Z"},
+    {id: 11, name: "埼玉県", city: "さいたま市", d: "M539,379 l40,5 l0,15 l-40,0 Z"},
+    {id: 12, name: "千葉県", city: "千葉市", d: "M579,389 l15,5 l-5,45 l-15,-15 Z"},
+    {id: 13, name: "東京都", city: "新宿区", d: "M539,394 l40,0 l0,10 l-40,5 Z"},
+    {id: 14, name: "神奈川県", city: "横浜市", d: "M529,404 l30,5 l-5,15 l-30,-5 Z"},
+    {id: 15, name: "新潟県", city: "新潟市", d: "M519,269 l50,30 l-10,45 l-35,-20 Z"},
+    {id: 16, name: "富山県", city: "富山市", d: "M489,309 l30,10 l-5,25 l-25,-5 Z"},
+    {id: 17, name: "石川県", city: "金沢市", d: "M469,279 l20,30 l-10,35 l-15,-30 Z"},
+    {id: 18, name: "福井県", city: "福井市", d: "M449,329 l30,10 l-10,25 l-30,-10 Z"},
+    {id: 19, name: "山梨県", city: "甲府市", d: "M509,374 l25,5 l-5,25 l-25,-5 Z"},
+    {id: 20, name: "長野県", city: "長野市", d: "M509,309 l30,10 l5,55 l-35,-5 Z"},
+    {id: 21, name: "岐阜県", city: "岐阜市", d: "M474,339 l35,10 l-5,45 l-30,-15 Z"},
+    {id: 22, name: "静岡県", city: "静岡市", d: "M504,404 l40,5 l-10,25 l-30,-10 Z"},
+    {id: 23, name: "愛知県", city: "名古屋市", d: "M474,384 l30,15 l-5,25 l-25,-15 Z"},
+    {id: 24, name: "三重県", city: "津市", d: "M454,394 l20,10 l-5,50 l-15,-20 Z"},
+    {id: 25, name: "滋賀県", city: "大津市", d: "M449,359 l25,5 l-5,35 l-20,-10 Z"},
+    {id: 26, name: "京都府", city: "京都市", d: "M424,344 l25,5 l-10,35 l-20,-10 Z"},
+    {id: 27, name: "大阪府", city: "大阪市", d: "M424,384 l20,5 l-5,25 l-15,-5 Z"},
+    {id: 28, name: "兵庫県", city: "神戸市", d: "M394,334 l30,10 l-10,55 l-20,-20 Z"},
+    {id: 29, name: "奈良県", city: "奈良市", d: "M444,389 l10,5 l0,40 l-15,-5 Z"},
+    {id: 30, name: "和歌山県", city: "和歌山市", d: "M424,414 l30,10 l-10,40 l-25,-25 Z"},
+    {id: 31, name: "鳥取県", city: "鳥取市", d: "M364,329 l30,5 l0,20 l-30,0 Z"},
+    {id: 32, name: "島根県", city: "松江市", d: "M314,339 l50,5 l-5,25 l-45,0 Z"},
+    {id: 33, name: "岡山県", city: "岡山市", d: "M364,349 l30,0 l-5,35 l-25,-10 Z"},
+    {id: 34, name: "広島県", city: "広島市", d: "M319,364 l45,5 l-5,35 l-40,-10 Z"},
+    {id: 35, name: "山口県", city: "山口市", d: "M279,364 l40,10 l-15,35 l-25,-20 Z"},
+    {id: 36, name: "徳島県", city: "徳島市", d: "M379,424 l35,5 l-15,25 l-20,-10 Z"},
+    {id: 37, name: "香川県", city: "高松市", d: "M364,404 l35,0 l-5,20 l-30,0 Z"},
+    {id: 38, name: "愛媛県", city: "松山市", d: "M314,414 l50,10 l-20,25 l-30,-5 Z"},
+    {id: 39, name: "高知県", city: "高知市", d: "M324,439 l60,10 l-20,35 l-40,-20 Z"},
+    {id: 40, name: "福岡県", city: "福岡市", d: "M244,394 l30,10 l-10,35 l-20,-15 Z"},
+    {id: 41, name: "佐賀県", city: "佐賀市", d: "M224,404 l20,5 l-5,20 l-15,-5 Z"},
+    {id: 42, name: "長崎県", city: "長崎市", d: "M199,409 l25,5 l-15,35 l-10,-20 Z"},
+    {id: 43, name: "熊本県", city: "熊本市", d: "M229,429 l25,10 l-5,45 l-20,-10 Z"},
+    {id: 44, name: "大分県", city: "大分市", d: "M269,414 l25,10 l-10,40 l-20,-20 Z"},
+    {id: 45, name: "宮崎県", city: "宮崎市", d: "M259,454 l20,10 l-10,60 l-15,-30 Z"},
+    {id: 46, name: "鹿児島県", city: "鹿児島市", d: "M224,474 l35,20 l-20,40 l-25,-30 Z"},
+    {id: 47, name: "沖縄県", city: "那覇市", d: "M150,530 l30,15 l-10,10 l-25,-10 Z"}
 ];
 
-let cleared = JSON.parse(localStorage.getItem('map_quiz_cleared')) || [];
-let currentTarget;
+let cleared = JSON.parse(localStorage.getItem('jp_quiz_v2')) || [];
+let current;
 
-function initMap() {
-    const svg = document.getElementById('japan-map');
-    prefs.forEach(p => {
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", p.x);
-        circle.setAttribute("cy", p.y);
-        circle.setAttribute("r", 8);
-        circle.setAttribute("id", "pref-" + p.name);
-        circle.setAttribute("class", "pref " + (cleared.includes(p.name) ? "cleared" : ""));
-        svg.appendChild(circle);
+function init() {
+    const svg = document.getElementById('japan-svg');
+    prefData.forEach(p => {
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", p.d);
+        path.setAttribute("id", "p-" + p.id);
+        if(cleared.includes(p.name)) path.classList.add('cleared');
+        svg.appendChild(path);
     });
-    nextQuestion();
+    next();
 }
 
-function nextQuestion() {
-    document.querySelectorAll('.pref').forEach(el => el.classList.remove('highlight'));
-    const remaining = prefs.filter(p => !cleared.includes(p.name));
+function next() {
+    document.querySelectorAll('path').forEach(p => p.classList.remove('highlight'));
+    const remains = prefData.filter(p => !cleared.includes(p.name));
+    document.getElementById('remain-count').innerText = remains.length;
     
-    if (remaining.length === 0) {
-        document.querySelector('.quiz-ui').innerHTML = "<h2>🎉 全県制覇！お見事です！</h2>";
+    if(remains.length === 0) {
+        document.getElementById('message').innerText = "🎉 全47都道府県コンプリート！";
         return;
     }
     
-    currentTarget = remaining[Math.floor(Math.random() * remaining.length)];
-    document.getElementById('pref-' + currentTarget.name).classList.add('highlight');
+    current = remains[Math.floor(Math.random() * remains.length)];
+    document.getElementById('p-' + current.id).classList.add('highlight');
     document.getElementById('ans-pref').value = "";
     document.getElementById('ans-city').value = "";
-    document.getElementById('remain-count').innerText = remaining.length;
+    document.getElementById('ans-pref').focus();
 }
 
 function checkAnswer() {
-    const p = document.getElementById('ans-pref').value.trim();
-    const c = document.getElementById('ans-city').value.trim();
-    const res = document.getElementById('result');
+    const ap = document.getElementById('ans-pref').value.trim();
+    const ac = document.getElementById('ans-city').value.trim();
+    const msg = document.getElementById('message');
 
-    if (p === currentTarget.name && c === currentTarget.city) {
-        res.innerText = "⭕ 正解！";
-        res.style.color = "green";
-        cleared.push(currentTarget.name);
-        localStorage.setItem('map_quiz_cleared', JSON.stringify(cleared));
-        document.getElementById('pref-' + currentTarget.name).classList.add('cleared');
-        setTimeout(nextQuestion, 1000);
+    if(ap === current.name && ac === current.city) {
+        msg.innerText = "⭕ 正解！";
+        msg.style.color = "#2e7d32";
+        cleared.push(current.name);
+        localStorage.setItem('jp_quiz_v2', JSON.stringify(cleared));
+        document.getElementById('p-' + current.id).classList.add('cleared');
+        setTimeout(next, 1000);
     } else {
-        res.innerText = "❌ 違うよ！";
-        res.style.color = "red";
+        msg.innerText = "❌ まちがい！";
+        msg.style.color = "#d32f2f";
     }
 }
 
 function resetGame() {
-    if(confirm("進捗を消去しますか？")) {
-        localStorage.removeItem('map_quiz_cleared');
+    if(confirm("データをすべて消しますか？")) {
+        localStorage.removeItem('jp_quiz_v2');
         location.reload();
     }
 }
 
-initMap();
+// Enterキー対応
+document.addEventListener('keydown', e => { if(e.key === 'Enter') checkAnswer(); });
+
+init();
 </script>
 </body>
 </html>
